@@ -23,8 +23,8 @@ static long foo;
 
 static void my_timer_function(unsigned long data)
 {
-    printk(KERN_INFO "TEST%ld!\n", foo * 1000);
-    mod_timer(&my_timer, jiffies + foo * 1000);
+    printk(KERN_INFO "Hello, World!\n");
+    mod_timer(&my_timer, jiffies + foo * HZ);
     if (foo == 0) {
       del_timer(&my_timer);
     }
@@ -43,8 +43,11 @@ static ssize_t foo_store(struct kobject *kobj, struct kobj_attribute *attr,
 {
   
   kstrtol(buf, 10, &foo);
-  
+  if (foo == 0) {
+      del_timer(&my_timer);
+    }
   init_timer(&my_timer);
+  my_timer.expires = jiffies;
   my_timer.data = 0;                     /* zero is passed to the timer handler */
   my_timer.function = my_timer_function;       /* function to run when timer expires */
   add_timer(&my_timer);

@@ -5,8 +5,11 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/timer.h>
+#include <linux/delay.h>
 
 
+
+struct timer_list my_timer;
 
 
 /*
@@ -15,13 +18,16 @@
  * "foo", "baz", and "bar".  If an integer is written to these files, it can be
  * later read out of it.
  */
-static struct timer_list exp_timer;
+//static struct timer_list exp_timer;
 static long foo;
 
-
-static void do_something(unsigned long data)
+static void my_timer_function(unsigned long data)
 {
-    printk(KERN_INFO "Hello, World!\n");       
+    printk(KERN_INFO "TEST%ld!\n", foo * 1000);
+    mod_timer(&my_timer, jiffies + foo * 1000);
+    if (foo == 0) {
+      del_timer(&my_timer);
+    }
 }
 /*
  * The "foo" file where a static variable is read from and written to.
@@ -35,19 +41,13 @@ static ssize_t foo_show(struct kobject *kobj, struct kobj_attribute *attr,
 static ssize_t foo_store(struct kobject *kobj, struct kobj_attribute *attr,
        const char *buf, size_t count)
 {
+  
   kstrtol(buf, 10, &foo);
-  while (1) {
-  init_timer_on_stack(&exp_timer);
-  exp_timer.expires = jiffies + foo * HZ;
-  exp_timer.data = 0;
-  exp_timer.function = do_something;
-  add_timer(&exp_timer);
-}
-  //setup_timer(&my_timer, foo_show, 0);
-  /* setup timer interval to 200 msecs */
-  // while (1) {
-  //    mod_timer(&my_timer, jiffies + msecs_to_jiffies(1000 * foo));
-  // }
+  
+  init_timer(&my_timer);
+  my_timer.data = 0;                     /* zero is passed to the timer handler */
+  my_timer.function = my_timer_function;       /* function to run when timer expires */
+  add_timer(&my_timer);
   return count;
 }
 
@@ -81,7 +81,7 @@ static struct kobject *example_kobj;
 static int __init example_init(void)
 {
   int retval;
-
+  
   /*
    * Create a simple kobject with the name of "kobject_example",
    * located under /sys/kernel/
@@ -91,6 +91,8 @@ static int __init example_init(void)
    * any type of dynamic kobjects, where the name and number are
    * not known ahead of time.
    */
+  
+  
   example_kobj = kobject_create_and_add("kobject_example", kernel_kobj);
   if (!example_kobj)
     return -ENOMEM;
@@ -105,11 +107,11 @@ static int __init example_init(void)
 
 static void __exit example_exit(void)
 {
-    del_timer(&exp_timer);
+    del_timer(&my_timer);
     kobject_put(example_kobj);
 }
 
 module_init(example_init);
 module_exit(example_exit);
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Minchuk SG>");
+MODULE_AUTHOR("Minchuk SG");

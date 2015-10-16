@@ -9,54 +9,54 @@
 
 
 
-struct timer_list my_timer;
+struct timer_list timer;
 
 
 /*
  * This module shows how to create a simple subdirectory in sysfs called
  * /sys/kernel/kobject-example  In that directory, 3 files are created:
- * "foo", "baz", and "bar".  If an integer is written to these files, it can be
+ * "delay", "baz", and "bar".  If an integer is written to these files, it can be
  * later read out of it.
  */
 //static struct timer_list exp_timer;
-static long foo;
+static long delay;
 
-static void my_timer_function(unsigned long data)
+static void timer_function(unsigned long data)
 {
     printk(KERN_INFO "Hello, World!\n");
-    mod_timer(&my_timer, jiffies + foo * HZ);
-    if (foo == 0) {
-      del_timer(&my_timer);
+    mod_timer(&timer, jiffies + delay * HZ);
+    if (delay == 0) {
+      del_timer(&timer);
     }
 }
 /*
- * The "foo" file where a static variable is read from and written to.
+ * The "delay" file where a static variable is read from and written to.
  */
-static ssize_t foo_show(struct kobject *kobj, struct kobj_attribute *attr,
+static ssize_t sys_show(struct kobject *kobj, struct kobj_attribute *attr,
       char *buf)
 {
-  return sprintf(buf, "%ld\n", foo);
+  return sprintf(buf, "%ld\n", delay);
 }
 
-static ssize_t foo_store(struct kobject *kobj, struct kobj_attribute *attr,
+static ssize_t sys_store(struct kobject *kobj, struct kobj_attribute *attr,
        const char *buf, size_t count)
 {
   
-  kstrtol(buf, 10, &foo);
-  if (foo == 0) {
-      del_timer(&my_timer);
+  kstrtol(buf, 10, &delay);
+  if (delay == 0) {
+      del_timer(&timer);
     }
-  init_timer(&my_timer);
-  my_timer.expires = jiffies;
-  my_timer.data = 0;                     /* zero is passed to the timer handler */
-  my_timer.function = my_timer_function;       /* function to run when timer expires */
-  add_timer(&my_timer);
+  init_timer(&timer);
+  timer.expires = jiffies;
+  timer.data = 0;                     /* zero is passed to the timer handler */
+  timer.function = timer_function;       /* function to run when timer expires */
+  add_timer(&timer);
   return count;
 }
 
 /* Sysfs attributes cannot be world-writable. */
-static struct kobj_attribute foo_attribute =
-  __ATTR(foo, 0664, foo_show, foo_store);
+static struct kobj_attribute sys_attribute =
+  __ATTR(delay, 0664, sys_show, sys_store);
 
 
 
@@ -65,7 +65,7 @@ static struct kobj_attribute foo_attribute =
  * at once.
  */
 static struct attribute *attrs[] = {
-  &foo_attribute.attr,
+  &sys_attribute.attr,
   NULL, /* need to NULL terminate the list of attributes */
 };
 
@@ -79,9 +79,9 @@ static struct attribute_group attr_group = {
   .attrs = attrs,
 };
 
-static struct kobject *example_kobj;
+static struct kobject *sys_kobj;
 
-static int __init example_init(void)
+static int __init sys_init(void)
 {
   int retval;
   
@@ -96,25 +96,25 @@ static int __init example_init(void)
    */
   
   
-  example_kobj = kobject_create_and_add("kobject_example", kernel_kobj);
-  if (!example_kobj)
+  sys_kobj = kobject_create_and_add("hello", kernel_kobj);
+  if (!sys_kobj)
     return -ENOMEM;
 
   /* Create the files associated with this kobject */
-  retval = sysfs_create_group(example_kobj, &attr_group);
+  retval = sysfs_create_group(sys_kobj, &attr_group);
   if (retval)
-    kobject_put(example_kobj);
+    kobject_put(sys_kobj);
 
   return retval;
 }
 
-static void __exit example_exit(void)
+static void __exit sys_exit(void)
 {
-    del_timer(&my_timer);
-    kobject_put(example_kobj);
+    del_timer(&timer);
+    kobject_put(sys_kobj);
 }
 
-module_init(example_init);
-module_exit(example_exit);
+module_init(sys_init);
+module_exit(sys_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Minchuk SG");
